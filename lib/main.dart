@@ -1,4 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:meteo_app/widget/appColors.dart';
+import 'package:meteo_app/widget/coordinates.dart';
+import 'api/weather_service.dart';
+import 'mapping/weather.dart';
+import 'widget/detailWeather.dart';
+import 'widget/hourlyDetail.dart';
+import 'widget/timeInterval.dart';
+import 'package:meteo_app/widget/backgroundImage.dart';
 
 void main() {
   runApp(const MyApp());
@@ -6,117 +14,211 @@ void main() {
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
-
-  // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Flutter Demo',
-      theme: ThemeData(
-        // This is the theme of your application.
-        //
-        // TRY THIS: Try running your application with "flutter run". You'll see
-        // the application has a purple toolbar. Then, without quitting the app,
-        // try changing the seedColor in the colorScheme below to Colors.green
-        // and then invoke "hot reload" (save your changes or press the "hot
-        // reload" button in a Flutter-supported IDE, or press "r" if you used
-        // the command line to start the app).
-        //
-        // Notice that the counter didn't reset back to zero; the application
-        // state is not lost during the reload. To reset the state, use hot
-        // restart instead.
-        //
-        // This works for code too, not just values: Most code changes can be
-        // tested with just a hot reload.
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
-      ),
-      home: const MyHomePage(title: 'Flutter Demo Home Page'),
+      home: const WeatherPage(),
     );
   }
 }
 
-class MyHomePage extends StatefulWidget {
-  const MyHomePage({super.key, required this.title});
-
-  // This widget is the home page of your application. It is stateful, meaning
-  // that it has a State object (defined below) that contains fields that affect
-  // how it looks.
-
-  // This class is the configuration for the state. It holds the values (in this
-  // case the title) provided by the parent (in this case the App widget) and
-  // used by the build method of the State. Fields in a Widget subclass are
-  // always marked "final".
-
-  final String title;
-
+class WeatherPage extends StatefulWidget {
+  const WeatherPage({super.key});
   @override
-  State<MyHomePage> createState() => _MyHomePageState();
+  _WeatherPageState createState() => _WeatherPageState();
 }
 
-class _MyHomePageState extends State<MyHomePage> {
-  int _counter = 0;
+class _WeatherPageState extends State<WeatherPage> {
+  final WeatherService weatherService = WeatherService();
+  final TextEditingController _latitudeController = TextEditingController();
+  final TextEditingController _longitudeController = TextEditingController();
 
-  void _incrementCounter() {
+  Weather? currentWeather;
+  Weather? hourlyWeather;
+  bool isLoading = true;
+  late DateTime _startDate;
+  late DateTime _endDate;
+
+  @override
+  void initState() {
+    super.initState();
+    _latitudeController.text = '48.85';
+    _longitudeController.text = '44.35';
+    final now = DateTime.now();
+    _startDate = now;
+    _endDate = now.add(const Duration(days: 1));
+    _getCurrentWeather();
+    _getHourlyWeather();
+  }
+
+  @override
+  void dispose() {
+    _latitudeController.dispose();
+    _longitudeController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _getCurrentWeather() async {
+    final latitude = double.tryParse(_latitudeController.text);
+    final longitude = double.tryParse(_longitudeController.text);
+    if (latitude == null || longitude == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Veuillez entrer des coordonnées valides.')),
+      );
+      return;
+    }
     setState(() {
-      // This call to setState tells the Flutter framework that something has
-      // changed in this State, which causes it to rerun the build method below
-      // so that the display can reflect the updated values. If we changed
-      // _counter without calling setState(), then the build method would not be
-      // called again, and so nothing would appear to happen.
-      _counter++;
+      isLoading = true;
     });
+    try {
+      // Appel sans les dates pour obtenir la météo actuelle
+      final data = await weatherService.fetchWeather(latitude, longitude);
+      setState(() {
+        currentWeather = Weather.fromJson(data);
+        isLoading = false;
+      });
+    } catch (e) {
+      setState(() { isLoading = false; });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Erreur lors de la récupération de la météo actuelle.')),
+      );
+    }
+  }
+  
+  Future<void> _getHourlyWeather() async {
+    final latitude = double.tryParse(_latitudeController.text);
+    final longitude = double.tryParse(_longitudeController.text);
+    if (latitude == null || longitude == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Veuillez entrer des coordonnées valides.')),
+      );
+      return;
+    }
+    setState(() { isLoading = true; });
+    try {
+      // Appel en passant les dates pour obtenir les prévisions horaires
+      final data = await weatherService.fetchWeather(
+        latitude,
+        longitude,
+        startDate: TimeInterval.formatDate(_startDate),
+        endDate: TimeInterval.formatDate(_endDate),
+      );
+      setState(() {
+        hourlyWeather = Weather.fromJson(data);
+        isLoading = false;
+      });
+    } catch (e) {
+      setState(() { isLoading = false; });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Erreur lors de la récupération des prévisions horaires.')),
+      );
+    }
+  }
+  
+  Future<void> loadWeather() async {
+    try {
+      
+      final data = await weatherService.fetchWeather(48.85, 44.35);
+      setState(() {
+        currentWeather = Weather.fromJson(data);
+        isLoading = false;
+      });
+      // Mise à jour des controllers avec les coordonnées par défaut
+      _latitudeController.text = '48.85';
+      _longitudeController.text = '44.35';
+    } catch (e) {
+      setState(() {
+        isLoading = false;
+      });
+    }
+  }
+
+  String getBackgroundImage(Weather weather) {
+    if (weather.precipitation > 0) return 'rainy.jpg';
+    if (weather.couvertureNuageuse > 50) return 'cloudy.jpg';
+    return 'sunny.jpg';
   }
 
   @override
   Widget build(BuildContext context) {
-    // This method is rerun every time setState is called, for instance as done
-    // by the _incrementCounter method above.
-    //
-    // The Flutter framework has been optimized to make rerunning build methods
-    // fast, so that you can just rebuild anything that needs updating rather
-    // than having to individually change instances of widgets.
     return Scaffold(
-      appBar: AppBar(
-        // TRY THIS: Try changing the color here to a specific color (to
-        // Colors.amber, perhaps?) and trigger a hot reload to see the AppBar
-        // change color while the other colors stay the same.
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-        // Here we take the value from the MyHomePage object that was created by
-        // the App.build method, and use it to set our appbar title.
-        title: Text(widget.title),
+      body: Stack(
+        children: [
+          if (currentWeather != null)
+            BackgroundImage(imagePath: getBackgroundImage(currentWeather!)),
+          isLoading
+              ? const Center(child: CircularProgressIndicator())
+              : currentWeather != null
+                  ? LayoutBuilder(
+                      builder: (context, constraints) {
+                        // Si largeur > 800px : 30% de marge, sinon 5%
+                        double widthFactor = constraints.maxWidth > 1024 ? 0.4 : 0.9;
+                        return Center(
+                          child: FractionallySizedBox(
+                            widthFactor: widthFactor,
+                            child: SingleChildScrollView(
+                              padding: const EdgeInsets.fromLTRB(0, 80.0, 0, 20.0),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.center,
+                                children: [
+                                  Padding(
+                                    padding: const EdgeInsets.only(bottom: 45.0),
+                                    child: Text(
+                                      '${currentWeather!.temperature}°C',
+                                      style: const TextStyle(
+                                        fontSize: 100,
+                                        height: 1,
+                                        color: AppColors.text,
+                                      ),
+                                    ),
+                                  ),
+                                  Detailweather(
+                                    temperatureResentie: currentWeather!.temperatureResentie,
+                                    humidite: currentWeather!.humidite,
+                                    vent: currentWeather!.vent,
+                                    precipitation: currentWeather!.precipitation,
+                                    couvertureNuageuse: currentWeather!.couvertureNuageuse,
+                                  ),
+                                  const SizedBox(height: 20),
+                                  Coordinates(
+                                    latitudeController: _latitudeController,
+                                    longitudeController: _longitudeController,
+                                    onGetWeather: _getCurrentWeather,
+                                  ),
+                                  const SizedBox(height: 20),
+                                  if (hourlyWeather != null && hourlyWeather!.hourlyTimes.isNotEmpty)
+                                    HourlyDetail(
+                                      hourlyTimes: hourlyWeather!.hourlyTimes,
+                                      hourlyApparentTemperature: hourlyWeather!.hourlyApparentTemperature,
+                                      hourlyHumidity: hourlyWeather!.hourlyHumidity,
+                                      hourlyPrecipitation: hourlyWeather!.hourlyPrecipitation,
+                                      hourlyCloudCover: hourlyWeather!.hourlyCloudCover,
+                                      onGetHourlyWeather: _getHourlyWeather,
+                                      initialStartDate: _startDate,
+                                      initialEndDate: _endDate,
+                                      onDateRangeChanged: (start, end) {
+                                        setState(() {
+                                          _startDate = start;
+                                          _endDate = end;
+                                        });
+                                      },
+                                    ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        );
+                      },
+                    )
+                  : const Center(
+                      child: Text(
+                        'Erreur lors du chargement des données',
+                        style: TextStyle(color: Colors.white),
+                      ),
+                    ),
+        ],
       ),
-      body: Center(
-        // Center is a layout widget. It takes a single child and positions it
-        // in the middle of the parent.
-        child: Column(
-          // Column is also a layout widget. It takes a list of children and
-          // arranges them vertically. By default, it sizes itself to fit its
-          // children horizontally, and tries to be as tall as its parent.
-          //
-          // Column has various properties to control how it sizes itself and
-          // how it positions its children. Here we use mainAxisAlignment to
-          // center the children vertically; the main axis here is the vertical
-          // axis because Columns are vertical (the cross axis would be
-          // horizontal).
-          //
-          // TRY THIS: Invoke "debug painting" (choose the "Toggle Debug Paint"
-          // action in the IDE, or press "p" in the console), to see the
-          // wireframe for each widget.
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            const Text('You have pushed the button this many times:'),
-            Text(
-              '$_counter',
-              style: Theme.of(context).textTheme.headlineMedium,
-            ),
-          ],
-        ),
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _incrementCounter,
-        tooltip: 'Increment',
-        child: const Icon(Icons.add),
-      ), // This trailing comma makes auto-formatting nicer for build methods.
     );
   }
 }
+
