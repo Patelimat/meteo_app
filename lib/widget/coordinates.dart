@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'appColors.dart';
 
 class Coordinates extends StatelessWidget {
   final TextEditingController latitudeController;
@@ -23,18 +24,18 @@ class Coordinates extends StatelessWidget {
             controller: latitudeController,
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
             decoration: InputDecoration(
-              hintText: 'Entrez la latitude',
-              prefixIcon: const Icon(Icons.location_pin, color: Colors.blueAccent),
+              prefixIcon: const Icon(Icons.location_on_rounded, color: Colors.blueAccent),
+              hintText: 'Latitude',
               filled: true,
               fillColor: Colors.grey[200],
               contentPadding: const EdgeInsets.symmetric(vertical: 20.0, horizontal: 16.0),
               enabledBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(30.0),
-                borderSide: const BorderSide(color: Colors.transparent),
+                borderSide: const BorderSide(color: AppColors.shadow),
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(30.0),
-                borderSide: const BorderSide(color: Colors.blueAccent, width: 2),
+                borderSide: const BorderSide(color: AppColors.shadow, width: 2),
               ),
             ),
           ),
@@ -43,18 +44,18 @@ class Coordinates extends StatelessWidget {
             controller: longitudeController,
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
             decoration: InputDecoration(
-              hintText: 'Entrez la longitude',
-              prefixIcon: const Icon(Icons.location_pin, color: Colors.blueAccent),
+              prefixIcon: const Icon(Icons.location_on_rounded, color: Colors.blueAccent),
+              hintText: 'Longitude',
               filled: true,
               fillColor: Colors.grey[200],
               contentPadding: const EdgeInsets.symmetric(vertical: 20.0, horizontal: 16.0),
               enabledBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(30.0),
-                borderSide: const BorderSide(color: Colors.transparent),
+                borderSide: const BorderSide(color: AppColors.shadow),
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(30.0),
-                borderSide: const BorderSide(color: Colors.blueAccent, width: 2),
+                borderSide: const BorderSide(color: AppColors.shadow, width: 2),
               ),
             ),
           ),
@@ -66,9 +67,9 @@ class Coordinates extends StatelessWidget {
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(30.0),
               ),
-              backgroundColor: Colors.blueAccent,
+              backgroundColor: AppColors.bouton,
             ),
-            child: const Text('Obtenir la météo', style: TextStyle(fontSize: 16)),
+            child: const Text('Obtenir la météo', style: TextStyle(fontSize: 16, color: AppColors.text)),
           ),
         ],
       ),

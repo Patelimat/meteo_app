@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:meteo_app/widget/appColors.dart';
 import 'package:meteo_app/widget/coordinates.dart';
 import 'api/weather_service.dart';
 import 'mapping/weather.dart';
 import 'widget/detailWeather.dart';
 import 'widget/hourlyDetail.dart';
+import 'widget/timeInterval.dart';
+import 'package:meteo_app/widget/backgroundImage.dart';
 
 void main() {
   runApp(const MyApp());
@@ -14,10 +17,6 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Api Météo',
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
-      ),
       home: const WeatherPage(),
     );
   }
@@ -34,21 +33,32 @@ class _WeatherPageState extends State<WeatherPage> {
   final TextEditingController _latitudeController = TextEditingController();
   final TextEditingController _longitudeController = TextEditingController();
 
-  Weather? weather;
+  Weather? currentWeather;
+  Weather? hourlyWeather;
   bool isLoading = true;
-  DateTime? _startDate;
-  DateTime? _endDate;
-
-  String formatDate(DateTime date) =>
-      '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+  late DateTime _startDate;
+  late DateTime _endDate;
 
   @override
   void initState() {
     super.initState();
-    loadWeather();
+    _latitudeController.text = '48.85';
+    _longitudeController.text = '44.35';
+    final now = DateTime.now();
+    _startDate = now;
+    _endDate = now.add(const Duration(days: 1));
+    _getCurrentWeather();
+    _getHourlyWeather();
   }
-  
-  Future<void> _getWeather() async {
+
+  @override
+  void dispose() {
+    _latitudeController.dispose();
+    _longitudeController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _getCurrentWeather() async {
     final latitude = double.tryParse(_latitudeController.text);
     final longitude = double.tryParse(_longitudeController.text);
     if (latitude == null || longitude == null) {
@@ -61,33 +71,56 @@ class _WeatherPageState extends State<WeatherPage> {
       isLoading = true;
     });
     try {
-      final data = await weatherService.fetchWeather(
-        latitude,
-        longitude,
-        startDate: _startDate != null ? formatDate(_startDate!) : null,
-        endDate: _endDate != null ? formatDate(_endDate!) : null,
-      );
+      // Appel sans les dates pour obtenir la météo actuelle
+      final data = await weatherService.fetchWeather(latitude, longitude);
       setState(() {
-        weather = Weather.fromJson(data);
+        currentWeather = Weather.fromJson(data);
         isLoading = false;
       });
     } catch (e) {
-      print('Erreur : $e');
-      setState(() {
-        isLoading = false;
-      });
+      setState(() { isLoading = false; });
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Erreur lors de la récupération des données météo.')),
+        const SnackBar(content: Text('Erreur lors de la récupération de la météo actuelle.')),
       );
     }
   }
-
+  
+  Future<void> _getHourlyWeather() async {
+    final latitude = double.tryParse(_latitudeController.text);
+    final longitude = double.tryParse(_longitudeController.text);
+    if (latitude == null || longitude == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Veuillez entrer des coordonnées valides.')),
+      );
+      return;
+    }
+    setState(() { isLoading = true; });
+    try {
+      // Appel en passant les dates pour obtenir les prévisions horaires
+      final data = await weatherService.fetchWeather(
+        latitude,
+        longitude,
+        startDate: TimeInterval.formatDate(_startDate),
+        endDate: TimeInterval.formatDate(_endDate),
+      );
+      setState(() {
+        hourlyWeather = Weather.fromJson(data);
+        isLoading = false;
+      });
+    } catch (e) {
+      setState(() { isLoading = false; });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Erreur lors de la récupération des prévisions horaires.')),
+      );
+    }
+  }
+  
   Future<void> loadWeather() async {
     try {
-      // Exemple: Paris
+      
       final data = await weatherService.fetchWeather(48.85, 44.35);
       setState(() {
-        weather = Weather.fromJson(data);
+        currentWeather = Weather.fromJson(data);
         isLoading = false;
       });
       // Mise à jour des controllers avec les coordonnées par défaut
@@ -100,112 +133,89 @@ class _WeatherPageState extends State<WeatherPage> {
     }
   }
 
-  Future<void> _selectDate({required bool isStart}) async {
-    final picked = await showDatePicker(
-      context: context,
-      initialDate: DateTime.now(),
-      firstDate: DateTime(2020),
-      lastDate: DateTime(2100),
-    );
-    if (picked != null) {
-      setState(() {
-        if (isStart) {
-          _startDate = picked;
-        } else {
-          _endDate = picked;
-        }
-      });
-    }
-  }
-
-  // Returns a background image path based on weather conditions.
-  String getBackgroundImage() {
-    if (weather == null) return 'sunny.jpg';
-    if (weather!.precipitation > 0) return 'rainy.jpg';
-    if (weather!.couvertureNuageuse > 50) return 'cloudy.jpg';
+  String getBackgroundImage(Weather weather) {
+    if (weather.precipitation > 0) return 'rainy.jpg';
+    if (weather.couvertureNuageuse > 50) return 'cloudy.jpg';
     return 'sunny.jpg';
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Météo actuelle')),
       body: Stack(
         children: [
-          // Background image (make sure to add your assets in pubspec.yaml)
-          if (weather != null)
-            SizedBox.expand(
-              child: Image.asset(
-                getBackgroundImage(),
-                fit: BoxFit.cover,
-              ),
-            )
-          else
-            Container(color: Colors.grey),
-          // Foreground content with transparent background
-          Container(
-            color: Colors.black.withOpacity(0.3),
-            child: isLoading
-                ? const Center(child: CircularProgressIndicator())
-                : weather != null
-                    ? SingleChildScrollView(
-                        padding: const EdgeInsets.all(16),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.center,
-                          children: [
-                            // Temperature & details at the top
-                            Text(
-                              '${weather!.temperature}°C',
-                              style: const TextStyle(fontSize: 100, height: 1, color: Colors.white),
-                            ),
-                            Detailweather(
-                              temperatureResentie: weather!.temperatureResentie,
-                              humidite: weather!.humidite,
-                              vent: weather!.windspeed,
-                              precipitation: weather!.precipitation,
-                              couvertureNuageuse: weather!.couvertureNuageuse,
-                            ),
-                            const SizedBox(height: 20),
-                            // Coordinates and get weather button
-                            Coordinates(
-                              latitudeController: _latitudeController,
-                              longitudeController: _longitudeController,
-                              onGetWeather: _getWeather,
-                            ),
-                            const SizedBox(height: 10),
-                            // Date selection buttons
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                              children: [
-                                ElevatedButton(
-                                  onPressed: () => _selectDate(isStart: true),
-                                  child: Text(_startDate == null
-                                      ? 'Date de début'
-                                      : 'Start: ${formatDate(_startDate!)}'),
-                                ),
-                                ElevatedButton(
-                                  onPressed: () => _selectDate(isStart: false),
-                                  child: Text(_endDate == null
-                                      ? 'Date de fin'
-                                      : 'End: ${formatDate(_endDate!)}'),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 20),
-                            // Hourly details widget
-                            if (weather!.hourlyTimes.isNotEmpty)
-                              HourlyDetail(
-                                hourlyTimes: weather!.hourlyTimes,
-                                hourlyApparentTemperature: weather!.hourlyApparentTemperature,
-                                hourlyHumidity: weather!.hourlyHumidity,
-                                hourlyPrecipitation: weather!.hourlyPrecipitation,
-                                hourlyCloudCover: weather!.hourlyCloudCover,
+          if (currentWeather != null)
+            BackgroundImage(imagePath: getBackgroundImage(currentWeather!)),
+          isLoading
+              ? const Center(child: CircularProgressIndicator())
+              : currentWeather != null
+                  ? LayoutBuilder(
+                      builder: (context, constraints) {
+                        // Si largeur > 800px : 30% de marge, sinon 5%
+                        double widthFactor = constraints.maxWidth > 1024 ? 0.4 : 0.9;
+                        return Center(
+                          child: FractionallySizedBox(
+                            widthFactor: widthFactor,
+                            child: SingleChildScrollView(
+                              padding: const EdgeInsets.fromLTRB(0, 80.0, 0, 20.0),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.center,
+                                children: [
+                                  Padding(
+                                    padding: const EdgeInsets.only(bottom: 45.0),
+                                    child: Text(
+                                      '${currentWeather!.temperature}°C',
+                                      style: const TextStyle(
+                                        fontSize: 100,
+                                        height: 1,
+                                        color: AppColors.text,
+                                      ),
+                                    ),
+                                  ),
+                                  Detailweather(
+                                    temperatureResentie: currentWeather!.temperatureResentie,
+                                    humidite: currentWeather!.humidite,
+                                    vent: currentWeather!.vent,
+                                    precipitation: currentWeather!.precipitation,
+                                    couvertureNuageuse: currentWeather!.couvertureNuageuse,
+                                  ),
+                                  const SizedBox(height: 20),
+                                  Coordinates(
+                                    latitudeController: _latitudeController,
+                                    longitudeController: _longitudeController,
+                                    onGetWeather: _getCurrentWeather,
+                                  ),
+                                  const SizedBox(height: 20),
+                                  if (hourlyWeather != null && hourlyWeather!.hourlyTimes.isNotEmpty)
+                                    HourlyDetail(
+                                      hourlyTimes: hourlyWeather!.hourlyTimes,
+                                      hourlyApparentTemperature: hourlyWeather!.hourlyApparentTemperature,
+                                      hourlyHumidity: hourlyWeather!.hourlyHumidity,
+                                      hourlyPrecipitation: hourlyWeather!.hourlyPrecipitation,
+                                      hourlyCloudCover: hourlyWeather!.hourlyCloudCover,
+                                      onGetHourlyWeather: _getHourlyWeather,
+                                      initialStartDate: _startDate,
+                                      initialEndDate: _endDate,
+                                      onDateRangeChanged: (start, end) {
+                                        setState(() {
+                                          _startDate = start;
+                                          _endDate = end;
+                                        });
+                                      },
+                                    ),
+                                ],
                               ),
-                          ],
-                        ),
-                      )
-                    : const Center(child: Text('Erreur lors du chargement des données', style: TextStyle(color: Colors.white))),
-          ),
+                            ),
+                          ),
+                        );
+                      },
+                    )
+                  : const Center(
+                      child: Text(
+                        'Erreur lors du chargement des données',
+                        style: TextStyle(color: Colors.white),
+                      ),
+                    ),
         ],
       ),
     );

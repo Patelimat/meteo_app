@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'appcolors.dart';
 
 class Detailweather extends StatelessWidget {
   final double temperatureResentie;
@@ -19,15 +20,14 @@ class Detailweather extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: EdgeInsets.symmetric(vertical: 5, horizontal: 300),
+      margin: EdgeInsets.symmetric(vertical: 5, horizontal: 5),
       padding: EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: const Color.fromARGB(32, 120, 159, 228), // Bleu opaque
+        color: AppColors.box,
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: const Color.fromARGB(97, 0, 0, 0),
-            offset: Offset(0, 5),
+            color: AppColors.shadow,
           ),
         ],
       ),
@@ -48,10 +48,10 @@ class Detailweather extends StatelessWidget {
     return Padding(
       padding: EdgeInsets.symmetric(vertical: 8, horizontal: 10),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
         children: [
-          Text(label, style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w600)),
-          Text(value, style: TextStyle(color: Colors.white, fontSize: 16)),
+          Text(label, style: TextStyle(color: AppColors.textSecondaire, fontSize: 16, fontWeight: FontWeight.w600)),
+          Text(value, style: TextStyle(color: AppColors.text, fontSize: 16)),
         ],
       ),
     );

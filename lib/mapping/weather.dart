@@ -2,11 +2,10 @@ class Weather {
   final double temperature;
   final double temperatureResentie;
   final double humidite;
-  final double windspeed;
+  final double vent;
   final double precipitation;
   final double couvertureNuageuse;
 
-  // Nouveaux champs pour les données horaires
   final List<String> hourlyTimes;
   final List<double> hourlyApparentTemperature;
   final List<double> hourlyHumidity;
@@ -17,7 +16,7 @@ class Weather {
     required this.temperature,
     required this.temperatureResentie,
     required this.humidite,
-    required this.windspeed,
+    required this.vent,
     required this.precipitation,
     required this.couvertureNuageuse,
     required this.hourlyTimes,
@@ -51,7 +50,7 @@ class Weather {
       temperature: (current['temperature'] as num).toDouble(),
       temperatureResentie: temperatureResentie,
       humidite: humiditeCurrent,
-      windspeed: (current['windspeed'] as num).toDouble(),
+      vent: (current['windspeed'] as num).toDouble(),
       precipitation: precipitationCurrent,
       couvertureNuageuse: couvertureNuageuseCurrent,
       hourlyTimes: times,
