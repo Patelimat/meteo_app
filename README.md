@@ -16,7 +16,6 @@ Cette application permet d'afficher la météo actuelle ainsi que des prévision
    ```
 
 3. **Exécuter l'application :**
-
    ```sh
    flutter run -d chrome
    ```
@@ -28,21 +27,21 @@ Cette application permet d'afficher la météo actuelle ainsi que des prévision
   Cliquez sur le bouton "Obtenir la météo" pour récupérer les données depuis l'API.
 
 - **Sélection de l'intervalle de temps :**  
-  Utilisez le widget de sélection d'intervalle pour définir une date de début et une datede fin (avec, pour la date de début, une limite imposée à 1 jours avant la date actuelle et 1 jour après la date actuelle).  
+  Utilisez le widget de sélection d'intervalle pour définir une date de début et une datede fin (avec, pour la date de début, une limite imposée à 1 jours avant la date actuelle et pour la date de fin une limite à 1 jour     après la date actuelle).  
 
 - **Affichage :**  
-  La page affiche en haut la température actuelle, suivie des détails (température ressentie, humidité, vent, précipitations et couverture nuageuse) et en dessous, les données horaires sont mises en forme  de façon responsives.
+  La page affiche en haut la température actuelle, suivie des détails (température ressentie, humidité, vent, précipitations et couverture nuageuse) et en dessous, les données horaires sont mises en forme  de façon           responsives.
 
-## Dépendances utilisées et raisons de ces choix
-
-- **Flutter & Dart :**  
-  Choisis pour leur rapidité de développement et la possibilité de créer une application multiplateforme (mobile, web).
+## Dépendances utilisées et pourquoi ce choix
 
 - **http :**  
   Utilisé pour effectuer des requêtes réseau vers l'API [Open-Meteo](https://open-meteo.com) afin de récupérer les données météorologiques au format JSON.
 
-- **intl :**  
-  Nécessaire pour le formatage des dates en français (exemple : `dd MMMM yyyy, HH:mm`). Cela permet de présenter les dates de façon localisée et conviviale.
-
 - **Widgets personnalisés (TimeInterval, Detailweather, HourlyDetail, Coordinates) :**  
   La modularisation du code en widgets permet une meilleure réutilisabilité et une maintenance facilitée. Chaque widget est spécialisé dans une partie de l’interface (par exemple la gestion des dates, l’affichage des détails météo, etc.).
+
+- **pubspec :**
+  L’application utilise des images de fond (ex. `sunny.jpg`, `rainy.jpg`, `cloudy.jpg`).
+
+- **responsive :** 
+  Le design est responsive grâce à `LayoutBuilder` pour s’adapter à toutes les tailles d’écran.
